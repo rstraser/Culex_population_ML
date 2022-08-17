@@ -13,6 +13,7 @@ library(ggplot2)
 
 library(prophet)
 library(randomForest)
+library(zoo)
 
 #################################################################################
 #
@@ -35,7 +36,7 @@ library(tidyr)
 
 #### Pull coordinate data from local hard drive ###
 
-dat.coord <- read.csv("H:/Sample_scripts_(Becky)/TrapLocation_3.csv")  #temp home location
+dat.coord <- read.csv("Z:/Research Dept/Research/Surveillance data records/Field Seeker/CollierFieldSeeker3_20220508/TrapLocation_3.csv")  #temp home location
 
 
 #### Import data from ArcGIS ###
@@ -433,6 +434,10 @@ CDC.list <- c("CDC AM Ave Entrance",
 # create the dataset
 dat.cdc <- dat.cdc[dat.cdc$NAME %in% CDC.list,]
 
+# join trap location coordinates to dataset
+dat.coord <- dat.coord %>% 
+                rename(NAME = Name)
+data.coord <- merge(dat.cdc, dat.coord, by='NAME')
 
 
 # calculate average female abundance per day
@@ -444,27 +449,84 @@ data <- dat.cdc %>%
 
 
 
-######## TESTING ROLLING AVERAGES (this works!)
+# group by ZONE
+data1 <- dat.cdc %>%
+  mutate(day = floor_date(ENDDATETIME, "day")) %>%
+  group_by(ZONE, day) %>%
+  summarize(avg = mean(FEMALES))
+  
 
-library(zoo)
-data <- data %>%
-  arrange(day) %>% 
-  mutate(avg3 = zoo::rollmean(avg, k = 3, fill = NA))  %>%
-  select(day,
-         avg,
-         avg3)
-head(data1)
 
+
+
+# calculate the moving averages (3 moving average)
+#data <- data %>%
+#  arrange(day) %>% 
+#  mutate(avg3 = zoo::rollmean(avg, k = 3, fill = NA))  %>%
+#  select(day,
+#         avg,
+#         avg3)
 
 
 
 # visualize time series data set
-data %>%
-  plot_time_series(day, avg3, .interactive = FALSE)
+#data %>%
+#  plot_time_series(day, avg, .interactive = FALSE)
+
+
+data1 %>%
+  group_by(ZONE) %>%
+  plot_time_series(day, avg,
+                   .facet_ncol  = 2, 
+                   .interactive = FALSE)
+
+# can also plot as boxplots
+data1 %>%
+  group_by(ZONE) %>%
+  plot_time_series_boxplot(day, avg,
+                           .period = "1 month",
+                   .facet_ncol  = 2, 
+                   .interactive = FALSE)
+
+# can detect anomalies
+data1 %>%
+  filter(ZONE == "Zone GGE") %>%
+  plot_anomaly_diagnostics(day, avg,)
+
+
+# can detect frequency and trends
+data1 %>%
+  filter(ZONE == "Zone GGE") %>%
+  plot_stl_diagnostics(day, avg, 
+                       .frequency = "auto", .trend = "auto",
+                       .interactive = FALSE)
+
 
 
 # create a csv to evaluate the raw data
 # write.csv(data, "Z:/Research Dept/Rob Straser/cx.nig.avgs")
+
+
+
+
+
+# Some ML models dont handle the moving average well, so keep regualar averages
+# Need to remove annomalie zeros in the data to reduce static
+# Subsetting by ZONE will help with the variation in the counts
+
+# TO DO LIST:
+# - remove anomaly zeros (<3 observation on a DATE???)
+# - subset by ZONE
+# - calculate sample date FEMALES averages within each ZONE
+# - rerun MLs on each ZONE separately 
+
+
+
+
+
+
+
+
 
 
 
@@ -479,7 +541,7 @@ data %>%
 # setting 'assess = 3 months" tells function to use last 3 months to data as a testing set
 # setting 'cumulative = TRUE' tells the sampling to use all prior data as training set
 splits <- data %>%
-  time_series_split(assess = "12 months", cumulative = TRUE)
+  time_series_split(assess = "3 months", cumulative = TRUE)
 
 # visualize the train/test split
 splits %>%
