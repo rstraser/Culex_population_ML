@@ -10,7 +10,6 @@ library(lubridate)
 library(tidyverse)
 library(parsnip)
 library(ggplot2)
-
 library(prophet)
 library(randomForest)
 library(zoo)
@@ -36,7 +35,15 @@ library(tidyr)
 
 #### Pull coordinate data from local hard drive ###
 
-dat.coord <- read.csv("Z:/Research Dept/Research/Surveillance data records/Field Seeker/CollierFieldSeeker3_20220508/TrapLocation_3.csv")  #temp home location
+# original FieldSeeker coordinates Becky used
+#dat.coord <- read.csv("Z:/Research Dept/Research/Surveillance data records/Field Seeker/CollierFieldSeeker3_20220508/TrapLocation_3.csv")  #temp home location
+
+
+fs.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/FS trap export 20220508.csv")  #temp home location
+geopro.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/GeoPro coords.csv")  #temp home location
+paper.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/site correction ref list.csv")  #temp home location
+
+
 
 
 #### Import data from ArcGIS ###
@@ -106,6 +113,28 @@ dat.lrc <- arc.select(object = LandingCount, fields = names(LandingCount@fields)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### Functions ###
 
 full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){  
@@ -113,9 +142,13 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
   d.end <- as.POSIXct(date.end)
   retrievals <- subset(dat.tr,
                        TRAPACTIVITYTYPE == "R" & ENDDATETIME > d.start & ENDDATETIME < d.end)  #all retrievals in date range
+  
   species.sub <- subset(dat.sa,
                         select = c("MALES", "FEMALES", "SPECIES", "TRAPDATA_ID", "GlobalID"))
   colnames(species.sub)[colnames(species.sub) == "GlobalID"] <- "GlobalID_Species"
+  
+  
+  
   merge1 <- merge(retrievals, species.sub,
                   by.x = "GlobalID",
                   by.y = "TRAPDATA_ID",
@@ -124,6 +157,9 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
                    select = c("LOC_ID", "ENDDATETIME", "COMMENTS", "LOCATIONNAME", "FEMALES",
                               "MALES", "SPECIES", "TRAPTYPE", "GlobalID", "GlobalID_Species"))
   colnames(merge1)[names(merge1) == "GlobalID"] <- "GlobalID_tr"  #retain TrapData GlobalID
+  
+
+  
   merge2 <- merge(merge1, dat.loc,
                   by.x = "LOC_ID",
                   by.y = "GlobalID",
@@ -132,11 +168,25 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
                    select = c("ENDDATETIME", "TRAPTYPE", "ZONE", "NAME", "SPECIES",
                               "FEMALES", "MALES", "COMMENTS.x", "LOCATIONNAME", "GlobalID_tr",
                               "HABITAT", "ACTIVE", "LOC_ID", "GlobalID_Species"))  #select final columns and reorder for output
+  
+  
   colnames(merge2)[names(merge2) == "COMMENTS.x"] <- "COMMENTS_TrapData"
   merge2$FEMALES[is.na(merge2$FEMALES) == TRUE] <- 0
   merge2$ENDDATETIME <- as.POSIXct(merge2$ENDDATETIME)  #formatting important for trap_totals
   return(merge2)
 }  #merges TrapLocation, TrapData and SpeciesAbundance tables, long format, no added zeroes
+
+
+
+
+
+
+
+
+
+
+
+
 
 trap_totals <- function(trap.start = "2018-01-01", trap.end = Sys.time()){  #optional date filter; defaults to full FS dataset
   merged.traps <- full_merge(trap.start, trap.end)
@@ -148,6 +198,16 @@ trap_totals <- function(trap.start = "2018-01-01", trap.end = Sys.time()){  #opt
   output <- as.data.frame(output)
   return(output)
 }  #sum females of all species collected by site and date
+
+
+
+
+
+
+
+
+
+
 
 species_counts <- function(sp.ref, trap.start = "2018-01-01", trap.end = Sys.time()){
   merged.traps <- full_merge(trap.start, trap.end)
@@ -167,6 +227,15 @@ species_counts <- function(sp.ref, trap.start = "2018-01-01", trap.end = Sys.tim
   output$SPECIES[which(is.na(output$SPECIES) == TRUE)] <- sp.ref  #fills in empty SPECIES values
   return(output)
 }  #return selected species females and males along with fem/male totals (all species) by collection date and site
+
+
+
+
+
+
+
+
+
 
 full_merge0 <- function(date.start = "2018-01-01", date.end = Sys.time()){  
   d.start <- as.POSIXct(date.start)
@@ -358,6 +427,20 @@ add_trapcoord <- function(df){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #####################
 #
 # Collate the data
@@ -369,6 +452,83 @@ add_trapcoord <- function(df){
 
 sp.cdc <- "Cx. nigripalpus"  #set target species for section
 dat.cdc <- species_counts(sp.cdc)
+
+#write.csv(dat.cdc, "Z:/Research Dept/Rob Straser/test.dat.cdc")
+
+
+
+
+
+
+# join in historical data (GeoPro and Paper records)
+
+# read in Geopro and Paper records
+setwd("Z:/Research Dept/Rob Straser/")
+paper <- read.csv("Historical data/2011-2014 FS compatible paper trap data.csv")
+geopro <- read.csv("Historical data/2015-2019 GeoPro and paper consolidated data.csv")
+
+
+sub.paper <- subset(paper,
+                            select = c("ENDDATETIME", "TRAPTYPE", "ZONE", "SPECIES",
+                                       "FEMALES", "MALES", "LOCATIONNAME"))
+
+
+sub.geopro <- subset(geopro,
+                             select = c("ENDDATETIME", "TRAPTYPE", "ZONE", "SPECIES",
+                                       "TOTAL", "MALES", "LOCATIONNAME"))
+
+# no delineation between FEMALES and TOTAL in GeoPro data
+# assuming TOTALS is equal to FEMALES
+sub.geopro <- sub.geopro %>%
+                    rename(FEMALES = TOTAL)
+
+sub.dat.cdc <- subset(dat.cdc,
+                             select = c("ENDDATETIME", "TRAPTYPE", "ZONE", "SPECIES",
+                                        "FEMALES", "MALES", "LOCATIONNAME"))
+
+
+sub.paper$ENDDATETIME <- as.Date(sub.paper$ENDDATETIME)
+sub.geopro$ENDDATETIME <- as.Date(sub.geopro$ENDDATETIME)
+sub.dat.cdc$ENDDATETIME <- as.Date(sub.dat.cdc$ENDDATETIME)
+
+
+
+
+######### START HERE: THIS IS JUST AN EXAMPLE OF MERGING COORDS BELOW
+# join trap location coordinates to dataset
+dat.coord <- dat.coord %>% 
+  rename(NAME = Name)
+data.coord <- merge(dat.cdc, dat.coord, by='NAME')
+
+
+#write.csv(sub.paper, "Z:/Research Dept/Rob Straser/paper")
+#write.csv(sub.geopro, "Z:/Research Dept/Rob Straser/geopro")
+#write.csv(sub.dat.cdc, "Z:/Research Dept/Rob Straser/datcdc")
+
+
+
+
+
+full.data <- rbind(sub.paper, sub.geopro, sub.dat.cdc)
+write.csv(full.data, "Z:/Research Dept/Rob Straser/TestFullData")
+
+
+#################################
+################################# 
+################################# NEXT THING TO DO: correct site names
+################################# check for duplicate naming/misspellings 
+#################################
+
+
+# align naming for culex nigripaplus
+full.data$SPECIES <- recode_factor(full.data$SPECIES, "Culex nigripalpus" = "Cx. nigripalpus")
+
+
+
+head(full.data)
+a <- table(full.data$LOCATIONNAME)
+#write.csv(a, "Z:/Research Dept/Rob Straser/AAAAA")
+
 
 dat.cdc$NAME <- gsub("CDC AM Del Webb 2", "CDC AM Del Webb", as.character(dat.cdc$NAME))  #fixes site crossover issue; coordinates not affected
 
@@ -456,7 +616,11 @@ data1 <- dat.cdc %>%
   summarize(avg = mean(FEMALES))
   
 
-
+# TEST TEST TEST!!!! group by ZONE
+data2 <- full.data %>%
+  mutate(day = floor_date(ENDDATETIME, "day")) %>%
+  group_by(ZONE, day) %>%
+  summarize(avg = mean(FEMALES))
 
 
 # calculate the moving averages (3 moving average)
@@ -473,8 +637,8 @@ data1 <- dat.cdc %>%
 #data %>%
 #  plot_time_series(day, avg, .interactive = FALSE)
 
-
 data1 %>%
+  filter(T)
   group_by(ZONE) %>%
   plot_time_series(day, avg,
                    .facet_ncol  = 2, 
