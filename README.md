@@ -14,7 +14,7 @@ This work is published in peer review journal,[JOURNAL](https://www.google.com) 
 XXX
 
 
-## Figures
+## Figures (update figures)
 ![total.figs](https://github.com/rstraser/Gryon_biocontrol_eval/blob/main/figures/total.figs.jpg)
 
 
