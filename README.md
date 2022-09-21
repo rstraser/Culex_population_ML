@@ -20,8 +20,7 @@ XXX
 
 ## Analytics (update)
 * data processing/cleaning
-* generalized linear models
-* pairwise comparisons
+* machine learning (autoML and ML)
 * data visualizations
 
 ## Technologies (update)
