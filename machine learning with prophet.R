@@ -3,7 +3,6 @@
 ##########################################
 
 # install packages
-install.packages('prophet')
 library(prophet)
 library(dplyr)
 library(ggplot2)
