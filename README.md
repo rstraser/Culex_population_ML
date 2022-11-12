@@ -1,5 +1,6 @@
-# Culex_population_ML
-Machine learning for predictive forecasting Culex populations in Collier County.
+# Predictive modeling of West Nile virus vector Culex nigripalpus using climate and surveillance data
+
+Culex nigripalus is one of the most prominent mosquito species in Southwest Florida. Given the tropical climate of the region, Cx. nigripalpus has the potential to reach high numbers across the the county, particularly during the summer season when local preciptation is highest. Using machine learning tools to forecast resident populations of Culex nigripalus in Collier County, Florida.
 
 ## Tl;dr
 
