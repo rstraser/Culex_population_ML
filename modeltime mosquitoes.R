@@ -2,7 +2,17 @@
 ### Modeltime for mosquito control ###
 ##########################################
 
-# install packages
+
+
+#################################################################################
+#
+#   NOTES: 
+#   - see modeltime tutorial for detailed information:
+#   - https://www.business-science.io/code-tools/2020/06/29/introducing-modeltime.html?utm_content=bufferd20d1&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer#
+#
+#################################################################################
+
+#### Load required packages ###
 library(tidymodels)
 library(modeltime)
 library(timetk)   
@@ -13,18 +23,6 @@ library(ggplot2)
 library(prophet)
 library(randomForest)
 library(zoo)
-
-#################################################################################
-#
-#   NOTES: 
-#   - run "FS trap data merge and summarize v20" for exporting FieldSeeker data
-#   - see modeltime tutorial for detailed information:
-#   - https://www.business-science.io/code-tools/2020/06/29/introducing-modeltime.html?utm_content=bufferd20d1&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer#
-#
-#################################################################################
-
-#### Load required packages ###
-
 library(ggplot2)
 library(reshape2)
 library(lubridate)
@@ -38,10 +36,51 @@ library(tidyr)
 # original FieldSeeker coordinates Becky used
 #dat.coord <- read.csv("Z:/Research Dept/Research/Surveillance data records/Field Seeker/CollierFieldSeeker3_20220508/TrapLocation_3.csv")  #temp home location
 
-
 fs.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/FS trap export 20220508.csv")  #temp home location
 geopro.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/GeoPro coords.csv")  #temp home location
 paper.coord <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Historical trap coordinates/site correction ref list.csv")  #temp home location
+
+
+# subset columns to join
+sub.fs.coord <- subset(fs.coord,
+                      select = c("Name", "x", "y"))
+sub.geopro.coord <- subset(geopro.coord,
+                       select = c("Name", "x", "y"))
+sub.paper.coord <- subset(paper.coord,
+                       select = c("Name", "x", "y"))
+
+# join all coordinate data
+dat.coord <- rbind(sub.paper.coord, sub.geopro.coord, sub.fs.coord)
+#write.csv(dat.coord, "Z:/Research Dept/Rob Straser/totalcoords")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -65,7 +104,6 @@ SpeciesAbundance <- arc.open(path = "https://services9.arcgis.com/pxQng7oePvh2pa
 dat.sa <- arc.select(object = SpeciesAbundance, fields = names(SpeciesAbundance@fields))
 dat.sa$SPECIES <- as.factor(dat.sa$SPECIES)
 colnames(dat.sa)
-
 
 TrapLocation <- arc.open(path = "https://services9.arcgis.com/pxQng7oePvh2pa6G/arcgis/rest/services/CollierFieldSeeker3/FeatureServer/3")
 dat.loc <- arc.select(object = TrapLocation, fields = names(TrapLocation@fields))
@@ -107,9 +145,6 @@ dat.lrcloc <- arc.select(object = LandingCountLocation, fields = names(LandingCo
 LandingCount <- arc.open(path = "https://services9.arcgis.com/pxQng7oePvh2pa6G/arcgis/rest/services/CollierFieldSeeker3/FeatureServer/16")
 dat.lrc <- arc.select(object = LandingCount, fields = names(LandingCount@fields))
 
-# ## TEMPORARY: Test data subset
-# dat.tr <- subset(dat.tr, as.Date(as.POSIXct(ENDDATETIME)) == as.Date("2020-11-17"))
-# dat.sa <- subset(dat.sa, as.Date(as.POSIXct(created_date)) == as.Date("2020-11-18"))
 
 
 
@@ -135,7 +170,8 @@ dat.lrc <- arc.select(object = LandingCount, fields = names(LandingCount@fields)
 
 
 
-#### Functions ###
+
+#### Functions (from Heinig FieldSeeker analyses) ###
 
 full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){  
   d.start <- as.POSIXct(date.start)
@@ -148,7 +184,6 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
   colnames(species.sub)[colnames(species.sub) == "GlobalID"] <- "GlobalID_Species"
   
   
-  
   merge1 <- merge(retrievals, species.sub,
                   by.x = "GlobalID",
                   by.y = "TRAPDATA_ID",
@@ -159,7 +194,6 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
   colnames(merge1)[names(merge1) == "GlobalID"] <- "GlobalID_tr"  #retain TrapData GlobalID
   
 
-  
   merge2 <- merge(merge1, dat.loc,
                   by.x = "LOC_ID",
                   by.y = "GlobalID",
@@ -180,14 +214,6 @@ full_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
 
 
 
-
-
-
-
-
-
-
-
 trap_totals <- function(trap.start = "2018-01-01", trap.end = Sys.time()){  #optional date filter; defaults to full FS dataset
   merged.traps <- full_merge(trap.start, trap.end)
   output <- merged.traps %>%
@@ -198,13 +224,6 @@ trap_totals <- function(trap.start = "2018-01-01", trap.end = Sys.time()){  #opt
   output <- as.data.frame(output)
   return(output)
 }  #sum females of all species collected by site and date
-
-
-
-
-
-
-
 
 
 
@@ -227,12 +246,6 @@ species_counts <- function(sp.ref, trap.start = "2018-01-01", trap.end = Sys.tim
   output$SPECIES[which(is.na(output$SPECIES) == TRUE)] <- sp.ref  #fills in empty SPECIES values
   return(output)
 }  #return selected species females and males along with fem/male totals (all species) by collection date and site
-
-
-
-
-
-
 
 
 
@@ -278,6 +291,9 @@ full_merge0 <- function(date.start = "2018-01-01", date.end = Sys.time()){
   return(merge2)
 }  #merges trap-related tables (long format) and adds zeroes, keeps all species, no ovicups
 
+
+
+
 wide_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){  
   d.start <- as.POSIXct(date.start)
   d.end <- as.POSIXct(date.end)
@@ -313,7 +329,7 @@ wide_merge <- function(date.start = "2018-01-01", date.end = Sys.time()){
   return(merge2)
 }  #merges tables (wide format) and adds zeroes, keeps all species, no ovicups
 
-graph_prep <- function(df){
+graph_prep1 <- function(df){
   x <- df  #data frame
   x$Date <- as.Date(x$ENDDATETIME)
   x$DateRef <- x$Date
@@ -322,6 +338,21 @@ graph_prep <- function(df){
   x$Year <- factor(x$Year)
   # TO DO: add epi week column
   x$NAME <- factor(x$NAME)  #get rid of extraneous factor values following subsetting
+  x$ZONE <- factor(x$ZONE)
+  #  x$SPECIES <- factor(x$SPECIES)
+  x$TRAPTYPE <- factor(x$TRAPTYPE)
+  return(x)
+}  #adds useful columns for graphing
+
+graph_prep <- function(df){
+  x <- df  #data frame
+  x$Date <- as.Date(x$ENDDATETIME)
+  x$DateRef <- x$Date
+  year(x$DateRef) <- 2000  #this was a leap year; use this to overplot multiple years
+  x$Year <- year(x$Date)   #useful for color coding overplots
+  x$Year <- factor(x$Year)
+  # TO DO: add epi week column
+  x$LOCATIONNAME <- factor(x$LOCATIONNAME)  #get rid of extraneous factor values following subsetting
   x$ZONE <- factor(x$ZONE)
   #  x$SPECIES <- factor(x$SPECIES)
   x$TRAPTYPE <- factor(x$TRAPTYPE)
@@ -452,10 +483,7 @@ add_trapcoord <- function(df){
 
 sp.cdc <- "Cx. nigripalpus"  #set target species for section
 dat.cdc <- species_counts(sp.cdc)
-
 #write.csv(dat.cdc, "Z:/Research Dept/Rob Straser/test.dat.cdc")
-
-
 
 
 
@@ -490,177 +518,1056 @@ sub.dat.cdc <- subset(dat.cdc,
 sub.paper$ENDDATETIME <- as.Date(sub.paper$ENDDATETIME)
 sub.geopro$ENDDATETIME <- as.Date(sub.geopro$ENDDATETIME)
 sub.dat.cdc$ENDDATETIME <- as.Date(sub.dat.cdc$ENDDATETIME)
-
-
-
-
-######### START HERE: THIS IS JUST AN EXAMPLE OF MERGING COORDS BELOW
-# join trap location coordinates to dataset
-dat.coord <- dat.coord %>% 
-  rename(NAME = Name)
-data.coord <- merge(dat.cdc, dat.coord, by='NAME')
-
-
 #write.csv(sub.paper, "Z:/Research Dept/Rob Straser/paper")
 #write.csv(sub.geopro, "Z:/Research Dept/Rob Straser/geopro")
 #write.csv(sub.dat.cdc, "Z:/Research Dept/Rob Straser/datcdc")
 
 
 
-
-
 full.data <- rbind(sub.paper, sub.geopro, sub.dat.cdc)
-write.csv(full.data, "Z:/Research Dept/Rob Straser/TestFullData")
+#write.csv(full.data, "Z:/Research Dept/Rob Straser/fulldata")
+
+
+
+
+
+
 
 
 #################################
 ################################# 
-################################# NEXT THING TO DO: correct site names
-################################# check for duplicate naming/misspellings 
+################################# 
 #################################
+
+
+
+
+
+
 
 
 # align naming for culex nigripaplus
 full.data$SPECIES <- recode_factor(full.data$SPECIES, "Culex nigripalpus" = "Cx. nigripalpus")
+table(full.data$SPECIES)
 
-
-
-head(full.data)
+# assess site location names
 a <- table(full.data$LOCATIONNAME)
 #write.csv(a, "Z:/Research Dept/Rob Straser/AAAAA")
 
 
-dat.cdc$NAME <- gsub("CDC AM Del Webb 2", "CDC AM Del Webb", as.character(dat.cdc$NAME))  #fixes site crossover issue; coordinates not affected
+# corrert duplicate site names
+dat.cdc$NAME <- gsub("CDC AM Davey Lndscp Yrd", "CDC AM Davey Landscape Yard", as.character(dat.cdc$NAME))  #fixes site crossover issue; coordinates not affected
+dat.cdc$NAME <- gsub("CDC AM WATER PLANT SWAMP", "CDC AM Water Plant Swamp", as.character(dat.cdc$NAME))  #fixes site crossover issue; coordinates not affected
+dat.cdc$NAME <- gsub("CDC GGE South Desoto ", "CDC GGE South Desoto", as.character(dat.cdc$NAME))  #fixes site crossover issue; coordinates not affected
 
+
+              
 CDC.list <- c("CDC AM Ave Entrance",
+              "CDC AM Ave Maria",
+              "CDC AM Bellera",
+              "CDC AM Davey Landscape Yard",
               "CDC AM Del Webb",
-              "CDC AM Davey Lndscp Yrd",
+              "CDC AM Del Webb 2",
+              "CDC AM Del Webb North",
               "CDC AM Dog Park",
-              "CDC AM Dog Park 2", # whats up with this site?
-              "CDC AM NORTH PRK PASTURE",
+              "CDC AM Dog Park 2",
+              "CDC AM Emerson Park",
+              "CDC AM EMS 32",
               "CDC AM Maple Ridge",
-              "CDC AM Maple Ridge 11", # whats up with this site?
+              "CDC AM Maple Ridge 11",
+              "CDC AM North Park",
               "CDC AM North Park E",
-              "CDC Oil Well Grade Rd",
-              "CDC AM Trap 7", # whats up with this site?
-              "CDC AM Trap 8", # whats up with this site?
+              "CDC AM North Park Pasture",
+              "CDC AM Oil Well Grade Rd",
+              "CDC AM Patrick",
+              "CDC AM Trap 7",
+              "CDC AM Trap 8",
               "CDC AM Water Park",
+              "CDC AM Water Plant",
+              "CDC AM Water Plant Swamp",
               "CDC CS Collier Seminole 1",
-              "CDC CS Collier Seminole 2", 
+              "CDC CS Collier Seminole 2",
               "CDC E Bayshore Dr",
               "CDC E Bayview",
+              "CDC E Becca Ave",
+              "CDC E Cope Ln",
+              "CDC E Florida Sports Park",
               "CDC E Kings Lake",
+              "CDC E Lely",
+              "CDC E Lely High School",
               "CDC E Sports Park",
+              "CDC E Weeks",
               "CDC E Wendy",
+              "CDC E Whitaker",
+              "CDC GGC Golden Gate High School",
+              "CDC GGC Hickory Wood Dr",
+              "CDC GGC Lancewood Way",
               "CDC GGC Whippoorwill",
               "CDC GGE 15th St NW",
+              "CDC GGE 20th St SE",
               "CDC GGE 29th Ave SW",
               "CDC GGE 43rd and 40th",
               "CDC GGE 47th and 12th",
-              "CDC GGE Richard St",
-              "CDC GGE Shady Hollow",
-              "CDC GGE Weber",
               "CDC GGE 66th Ave NE",
+              "CDC GGE Buekowski",
+              "CDC GGE Corkscrew Fire Station",
+              "CDC GGE Desoto",
+              "CDC GGE Everglades North",
+              "CDC GGE Everglades South",
+              "CDC GGE Fire Station 12",
+              "CDC GGE Landfill",
+              "CDC GGE Leann",
+              "CDC GGE Morris",
               "CDC GGE North Desoto",
-              "CDC GGE South Desoto ",
-              "CDC HC 1", 
-              "CDC HC 2", 
+              "CDC GGE Oil Well Rd",
+              "CDC GGE Phillips",
+              "CDC GGE Quarry",
+              "CDC GGE Richard St",
+              "CDC GGE Ryan ",
+              "CDC GGE Shady Hollow",
+              "CDC GGE South Desoto",
+              "CDC GGE Stivers",
+              "CDC GGE Weber",
+              "CDC GGE Willis",
+              "CDC HC 6L Farms",
+              "CDC HC Brandy Ln",
               "CDC HC Fiddlers Creek",
               "CDC HC KOA",
               "CDC HC Lipman House",
               "CDC HC Lipman Office",
+              "CDC HC Sabal Palm",
               "CDC HC Trevisio Bay Dr",
               "CDC IM Airport Ditch",
               "CDC IM Anez",
+              "CDC IM Animal Control",
+              "CDC IM Audobon",
+              "CDC IM Career Source",
               "CDC IM Carson Rd",
-              "CDC IM Hector Ramirez", # whats up with this site?
-              "CDC IM Indian Camp Rd",
-              "CDC IM Little League",
               "CDC IM Farm Village",
+              "CDC IM Hector Ramirez",
+              "CDC IM Immokalee",
+              "CDC IM Immokalee Airport",
+              "CDC IM Indian Camp Rd",
+              "CDC IM James Brown",
+              "CDC IM Lake Trafford",
+              "CDC IM Lake Trafford Fire Dept",
               "CDC IM LCEC",
+              "CDC IM LCEC 11",
+              "CDC IM Little League",
+              "CDC IM Little League Field",
+              "CDC IM Little League Park",
+              "CDC IM Naples Children's Hospital",
+              "CDC IM Racetrack",
+              "CDC IM Village Oaks Elementary",
               "CDC IM Water Plant",
+              "CDC IM Williams Farms Swamp",
               "CDC KW Keewaydin 1",
               "CDC KW Keewaydin S Ctrl",
               "CDC KW Windstar",
+              "CDC M Capri Blvd",
+              "CDC M Goodland",
+              "CDC M Isles of Capri",
               "CDC M Stevens Landing",
+              "CDC N Collier Reserve",
+              "CDC N Little Hickory",
               "CDC N Nicholas Blvd",
+              "CDC N Palm River",
+              "CDC N Pine Ridge",
+              "CDC N Quail Creek",
+              "CDC N Rose",
               "CDC N Veterans Park",
-              "CDC NA Keewaydin 2", # note the wrong zone label?
+              "CDC N Victoria Park",
+              "CDC N Water Park",
+              "CDC N Willoughby",
               "CDC PY Canal Rd",
               "CDC PY Newman Dr",
               "CDC PY Picayune Trailhead",
-              "CDC T Crayton")
+              "CDC T Crayton",
+              "CDC T Crayton ",
+              "CDC T Klein",
+              "CDC T test trap",
+              "CDC T Town",
+              "CDC T Wilderness",
+              "CDC T Windmill Academy",
+              "CDC XO 66th St SW",
+              "CDC XO 92nd Ave",
+              "CDC XO Caxambas",
+              "CDC XO Fiddlers Creek",
+              "CDC XO Golf Course",
+              "CDC XO Mediterra",
+              "CDC XO North Lake Dr",
+              "CDC XO Picayune",
+              "CDC XO Rail Head",
+              "CDC XO Seminole",
+              "CDC XO Willow",
+              "NJL AM Ave Maria",
+              "NJL AM Del Webb",
+              "NJL AM Dog Park",
+              "NJL AM Emerson Park",
+              "NJL AM EMS 32",
+              "NJL AM North Park",
+              "NJL AM Pump House",
+              "NJL AM Water Plant Swamp",
+              "NJL E Boat Place",
+              "NJL E Boca Ciega",
+              "NJL E County Barn",
+              "NJL E East",
+              "NJL E Fire Station 42",
+              "NJL E Hughes",
+              "NJL E Lely",
+              "NJL E Palm Springs",
+              "NJL E Royal Harbor",
+              "NJL E Tower Rd",
+              "NJL E Weeks",
+              "NJL GGC Collier Tire",
+              "NJL GGC Dogwood Way",
+              "NJL GGC Fraternal Order of Eagles",
+              "NJL GGC Logan",
+              "NJL GGC Rose",
+              "NJL GGC Wyndemere",
+              "NJL GGE 10th Ave SE Desoto",
+              "NJL GGE 6th Ave S",
+              "NJL GGE Buekowski",
+              "NJL GGE Church",
+              "NJL GGE EMS 12",
+              "NJL GGE Everglades South",
+              "NJL GGE Fire Station 12",
+              "NJL GGE Landfill",
+              "NJL GGE May",
+              "NJL GGE Olde Florida",
+              "NJL GGE Radio and 951",
+              "NJL GGE Ryan",
+              "NJL GGE Salinas",
+              "NJL GGE South Desoto",
+              "NJL GGE Stivers",
+              "NJL GGE Wilson",
+              "NJL HC Hidden Oaks Ln",
+              "NJL HC KOA",
+              "NJL HC Lord's Way",
+              "NJL HC Naples Shores",
+              "NJL HC Sabal Palm",
+              "NJL IM Anez",
+              "NJL IM Animal Control",
+              "NJL IM Bass & Bass",
+              "NJL IM Ernesto",
+              "NJL IM Farm Village",
+              "NJL IM Health Department",
+              "NJL IM Immokalee Airport",
+              "NJL IM Immokalee Tire",
+              "NJL IM James Brown",
+              "NJL IM Lake Trafford",
+              "NJL IM Lake Trafford Fire Dept",
+              "NJL IM Naples Children's Hospital",
+              "NJL IM NCH & Del Webb",
+              "NJL IM Nunez",
+              "NJL IM Racetrack",
+              "NJL IM Raulerson Rd",
+              "NJL IM Water Plant",
+              "NJL M Goodland",
+              "NJL M Island Club",
+              "NJL M Isles of Capri",
+              "NJL M Tiger Tail Beach",
+              "NJL M Woodway",
+              "NJL N Bonita Bay",
+              "NJL N Little Hickory",
+              "NJL N Livingston",
+              "NJL N Palm River",
+              "NJL N Pelican Bay",
+              "NJL N Pine Ridge",
+              "NJL N Rose",
+              "NJL N Venetian Way",
+              "NJL T Coach House",
+              "NJL T Park Shore",
+              "NJL T Parker Aero",
+              "NJL T Reynolds",
+              "NJL T Town",
+              "NJL XO Naples South",
+              "NJL XO Palm",
+              "NJL XO Seminole",
+              "NJL XO Shadow Ridge",
+              "NJL XO Shepherd of the Glades",
+              "NJL XO Sod Farm",
+              "NJL XO Unknown",
+              "NJL XO Willow")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################
+# THIS IS ONLY WORKS FOR FEILDSEEKER DATA
+#####################
+#
+## create the dataset
+#dat.cdc <- dat.cdc[dat.cdc$NAME %in% CDC.list,]
+#
+## join trap location coordinates to dataset
+#dat.coord <- dat.coord %>% 
+#                rename(NAME = Name)
+#data.coord <- merge(dat.cdc, dat.coord, by='NAME')
+#
+#
+## calculate average female abundance per day
+#data <- dat.cdc %>%
+#  mutate(day = floor_date(ENDDATETIME, "day")) %>%
+# group_by(day) %>%
+#  summarize(avg = mean(FEMALES))
+#
+#
+## group by ZONE
+#data1 <- dat.cdc %>%
+#  mutate(day = floor_date(ENDDATETIME, "day")) %>%
+#  group_by(ZONE, day) %>%
+#  summarize(avg = mean(FEMALES))
+#  
+#########################
+
+
+
 
 # create the dataset
-dat.cdc <- dat.cdc[dat.cdc$NAME %in% CDC.list,]
+complete.dat <- full.data[full.data$LOCATIONNAME %in% CDC.list,]
 
 # join trap location coordinates to dataset
-dat.coord <- dat.coord %>% 
-                rename(NAME = Name)
-data.coord <- merge(dat.cdc, dat.coord, by='NAME')
+#dat.coord <- dat.coord %>% 
+#  rename(LOCATIONNAME = Name)
+#complete.dat <- merge(full.dat, dat.coord, by='LOCATIONNAME')
 
 
-# calculate average female abundance per day
-data <- dat.cdc %>%
+#   Notes:
+#   "complete.dat' = includes cx nig counts from CDC and NJL traps from paper, geopro, feildseeker including coords
+
+#write.csv(complete.dat, "Z:/Research Dept/Rob Straser/completedat")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##################################
+### Add climate data to "complete.dat"
+##################################
+
+
+clim <- read.csv("Z:/Research Dept/Rob Straser/Historical data/Parkside Elementary School weather station.csv", fileEncoding="UTF-8-BOM")  #temp home location
+
+# join complete data (mosquito abundnace) and climate data
+# Remember to rename "Timestamp" to "ENDDATETIME"
+
+clim$ENDDATETIME <- as.Date(clim$ENDDATETIME)
+comp.data <- left_join(complete.dat, clim, by=c("ENDDATETIME"))
+
+#write.csv(comp.data, "Z:/Research Dept/Rob Straser/complete dataset with climate")
+
+
+
+
+# subset data to include only Zones AM, IM and GEE
+sub.data <- subset(comp.data, ZONE == "Zone AM" |
+                 ZONE == "Zone IM" |
+                 ZONE == "Zone GGE")
+
+
+# subset data to include only Zones AM, IM and GEE
+sub.data2 <- subset(sub.data, SPECIES == "Cx. nigripalpus")
+
+# subset data to include only post 2017
+my.data <- subset(sub.data2, ENDDATETIME > "2017-01-01")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####################################
+#####################################
+#####################################
+###########
+###########   Prophet package
+###########
+#####################################
+#####################################
+#####################################
+
+
+
+
+
+
+# plot the daily averages
+
+df_tidy_mean <- my.data %>%
+  filter(!is.na(FEMALES)) %>%
+  group_by(ENDDATETIME) %>%
+  summarise(n = n(),
+            mean = mean(FEMALES),
+            median = median(FEMALES)) 
+
+
+
+ggplot(df_tidy_mean, aes(x=ENDDATETIME, y=mean)) +
+  geom_line(aes(x=ENDDATETIME, y=mean)) +
+  theme_bw()
+
+
+
+ggplot(df_tidy_mean, aes(x=ENDDATETIME, y=n)) +
+  geom_point(aes(x=ENDDATETIME, y=n)) +
+  geom_smooth(aes(x=ENDDATETIME, y=n))+
+  theme_bw()
+
+
+
+
+### test with daily averages first
+# "prophet" must include 'ds' (date) and 'y' (abundance)
+# rename date and abunance in dataset
+
+df_tidy_mean$ds <- df_tidy_mean$ENDDATETIME
+df_tidy_mean$y <- df_tidy_mean$mean
+
+head(df_tidy_mean)
+
+m <- prophet(df_tidy_mean)
+future <- make_future_dataframe(m, periods = 365)
+forecast <- predict(m, future)
+
+plot(m, forecast) +
+  xlab("Date") +
+  ylab("Cx. nigripalpus abundance") +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  ggtitle("Prophet model for Cx. nig. seasonal trends")
+
+
+names(m)
+
+
+
+
+
+
+
+
+
+# Basic predictions machine learning
+
+# "prophet" must include 'ds' (date) and 'y' (abundance)
+# rename date and abunance in dataset
+
+my.data$ds <- my.data$ENDDATETIME
+my.data$y <- my.data$FEMALES
+
+head(my.data)
+
+m <- prophet(my.data)
+future <- make_future_dataframe(m, periods = 365)
+forecast <- predict(m, future)
+
+plot(m, forecast) +
+  xlab("Date") +
+  ylab("Cx. nigripalpus abundance") +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  ggtitle("Prophet model for Cx. nig. seasonal trends")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# add climate regressors
+
+pdat <- data.frame(ds = my.data$ENDDATETIME,
+                   y = my.data$FEMALES,
+                   temp = my.data$Thermometer,
+                   humid = my.data$Hygrometer,
+                   precip = my.data$Rain.Gauge)
+
+#write.csv(pdat, "Z:/Research Dept/Rob Straser/pdat")
+
+# remove the few dates that have missing climate data
+pdat <- na.omit(pdat)
+
+# Forecast weather regressors
+pfdat <- data.frame(ds=max(my.data$ENDDATETIME) + 1:25)
+
+pprecip <- pdat %>% 
+  select(ds,y=precip) %>% 
+  prophet() %>%
+  predict(pfdat)
+
+
+
+phumid <- pdat %>% 
+  select(ds,y=humid) %>% 
+  prophet() %>%
+  predict(pfdat)
+
+ptemp <- pdat %>% 
+  select(ds,y=temp) %>% 
+  prophet() %>%
+  predict(pfdat)
+
+fdat <-  data.frame(ds=pfdat$ds,
+                    precip=pprecip$yhat,
+                    humid=phumid$yhat,
+                    temp=ptemp$yhat)
+
+
+
+# Fit the model (Seasonality automatically determined)
+fit6 <- prophet() %>% 
+  add_regressor('precip') %>% 
+  add_regressor('humid') %>% 
+  add_regressor('temp') %>% 
+  fit.prophet(pdat)
+
+
+
+
+
+
+future.fit <- make_future_dataframe(fit6, periods = 365)
+forecast.fit <- predict(m, future.fit)
+
+
+
+# remove negative values from projected yhats
+forecast.fit$yhat <- pmax(forecast.fit$yhat,0)
+forecast.fit$yhat_lower <- pmax(forecast.fit$yhat_lower,0)
+
+
+plot(m, forecast.fit) +
+  xlab("Date") +
+  ylab("Cx. nigripalpus abundance") +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  ggtitle("Prophet model for Cx. nig. seasonal trends")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#################
+##### REMOVING OUTLIERS CREATES MAY DUPLICATE DAILY VALUES FOR SOME REASON - DONT RUN
+#################
+
+# removing outliers
+
+# this methods of outlier detection is based on percentiles, based on 1 and 99 percentiles
+#find Q1, Q3, and interquartile range for values in column A
+Q1 <- quantile(pdat$y, .01)
+Q3 <- quantile(pdat$y, .99)
+IQR <- IQR(pdat$y)
+
+#only keep rows in dataframe that have values within 1.5*IQR of Q1 and Q3
+pdat2 <- subset(pdat, pdat$y> (Q1 - 1.5*IQR) & pdat$y< (Q3 + 1.5*IQR))
+
+#view row and column count of new data frame
+dim(pdat2) 
+head(pdat2)
+
+
+
+
+
+
+
+### rerun the model
+
+
+# remove the few dates that have missing climate data
+pdat2 <- na.omit(pdat2)
+
+# Forecast weather regressors
+pfdat2 <- data.frame(ds=max(pdat2$ds) + 1:25)
+
+pprecip <- pdat2 %>% 
+  select(ds,y=precip) %>% 
+  prophet() %>%
+  predict(pfdat2)
+
+
+
+phumid <- pdat2 %>% 
+  select(ds,y=humid) %>% 
+  prophet() %>%
+  predict(pfdat2)
+
+ptemp <- pdat2 %>% 
+  select(ds,y=temp) %>% 
+  prophet() %>%
+  predict(pfdat2)
+
+fdat2 <-  data.frame(ds=pfdat2$ds,
+                    precip=pprecip$yhat,
+                    humid=phumid$yhat,
+                    temp=ptemp$yhat)
+
+
+
+# Fit the model (Seasonality automatically determined)
+fit7 <- prophet() %>% 
+  add_regressor('precip') %>% 
+  add_regressor('humid') %>% 
+  add_regressor('temp') %>% 
+  fit.prophet(pdat2)
+
+
+
+
+
+future.fit <- make_future_dataframe(fit7, periods = 365)
+forecast.fit <- predict(m, future.fit)
+
+
+
+plot(fit7, forecast.fit) +
+  xlab("Date") +
+  ylab("Cx. nigripalpus abundance") +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  ggtitle("Prophet model for Cx. nig. seasonal trends")
+
+
+
+
+
+
+
+
+
+# inspecting model components
+prophet_plot_components(fit6, forecast.fit)
+
+
+
+
+
+
+# plot other variables (including climate data)
+
+pdat
+
+
+temp.plot <- ggplot(my.data, aes(x=ds, y=temp), color = "black") +geom_line()+ theme_bw()
+temp.plot
+
+humid.plot <- ggplot(pdat, aes(x=ds, y=humid), color = "black") +geom_line()+ theme_bw()
+humid.plot
+
+precip.plot <- ggplot(pdat, aes(x=ds, y=precip), color = "black") +geom_line()+ theme_bw()
+precip.plot
+
+
+
+
+
+
+
+
+
+
+
+
+############
+## TESTING A NEW APPROACH
+#############
+
+
+library(tidyverse)
+library(gridExtra)
+library(lubridate)
+library(leaflet)
+library(randomForest)
+library(forecast)
+library(prophet)
+
+
+
+# How well weather regressors are at predicting mosquitoes?
+
+fit1 <- lm(y~humid+temp+precip,data=pdat)
+summary(fit1)
+
+pdat$resid[!is.na(pdat$y)] <- resid(fit1)
+
+
+library(ggplot2)
+# Plot the residuals
+ggplot(pdat,aes(ds,resid)) + 
+  geom_point() + geom_smooth() +
+  ggtitle("Linear Regression Residuals",
+          subtitle = paste0("RMSE: ",round(sqrt(mean(pdat$resid^2,na.rm=TRUE)),2)))
+
+
+Acf(pdat$resid, main="ACF of OLS Residuals")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####################################
+#####################################
+#####################################
+###########
+###########   Second take on Prophet Model
+###########
+#####################################
+#####################################
+#####################################
+
+
+# use the "pdat" data set - includes ds, y, temp, humid, precip
+
+
+# check proportion of missing values in each variable
+# proportion of NA values for these columns
+
+df <- pdat
+names(df)
+
+library(ggcorrplot) #for plotting correlations
+#calculating and plotting correlation 
+corr <- cor(df %>% select(y, temp, humid, precip))
+ggcorrplot(corr , hc.order = TRUE, method = "circle")
+
+
+
+
+# creating train-test split with split having exactly 60 days
+train <- df %>% slice(1:(dim(df)[1] - (60*24)))  # train having the rest
+test <- df %>% slice((dim(df)[1] - (60*24)) + 1:dim(df)[1]) # test having last 60 days
+
+
+
+
+### RANDOM FOREST
+#partial dependence plot approach
+library(randomForest) # for randomForest, partialPlot, and varImpPlot functions
+
+set.seed(100) # for reproducibility
+
+train.rf <- randomForest(y ~ ds + temp + precip + humid, data = df, importance = TRUE)
+
+#plotting relative importance of variables
+varImpPlot(train.rf)
+
+
+
+
+
+
+
+# aggregating data at daily level
+train_day <- train
+
+test_day <- test
+
+# creating prophet train and train_validation sets
+prophet_train <- train_day[1:(nrow(train_day) - 60),]
+prophet_train_val <- train_day[(nrow(train_day) - 60 + 1):nrow(train_day),] 
+
+# prophet test set
+prophet_test <- test_day
+
+
+
+
+
+# library for prophet model
+library(prophet)
+
+#creating an improved prophet model
+im <- (prophet(
+  df = NULL,   # Dataframe containing the history
+  growth = "linear",    # trend change/growth can't be logistic or flat for this TS
+  #changepoints = c('2013-08-10','2014-01-10', '2014-08-02', '2015-01-13', '2015-07-13',  
+  #'2016-01-22', '2016-08-04'), 
+  n.changepoints = 25, #more than default, might overfit 
+  changepoint.range = 0.80, # Proportion of history in which trend changepoints will be estimated
+  yearly.seasonality = TRUE, # Default Fourier Order
+  weekly.seasonality = FALSE, # no evidence for temp change for days of a week
+  daily.seasonality = FALSE, # Daily seasonality locked as off as data is daily leveled
+  holidays = NULL, # no evidence that holidays affect temp 
+  seasonality.mode = "additive", # by observation
+  seasonality.prior.scale = 10, # default
+  holidays.prior.scale = 10, # default for regressors too
+  changepoint.prior.scale = 0.05, # default
+  mcmc.samples = 0, # default
+  interval.width = 0.80, #default
+  uncertainty.samples = 1000, #default
+  fit = TRUE
+))
+
+# adding external regressors
+im = add_regressor(im,'temp',standardize = FALSE) # added temp as an external regressor
+im = add_regressor(im,'precip', standardize = FALSE) # added precip as an external regressor
+im = add_regressor(im,'humid', standardize = FALSE) # added humid as an external regressor
+
+# fitting a prophet model
+im = fit.prophet(im, df = prophet_train)
+
+#making future dataframes
+future_im <- make_future_dataframe(im, periods = 60, 
+                                   freq = "day", include_history = TRUE) #predictions for two months
+
+future_im$temp = head(train_day$temp ,nrow(future_im))
+future_im$precip = head(train_day$precip ,nrow(future_im))
+future_im$humid = head(train_day$humid, nrow(future_im))
+
+
+
+
+# prediction
+fcst_im <- predict(im,future_im) # creating forecast for 60 days
+tail(fcst_im[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')]) #observing tail observations
+dyplot.prophet(im,fcst_im , uncertainty = TRUE) # creating interactive plots for the forecast
+
+
+
+# remove negative values from projected yhats
+fcst_im$yhat <- pmax(fcst_im$yhat,0)
+fcst_im$yhat_lower <- pmax(fcst_im$yhat_lower,0)
+
+
+
+
+# plotting components of the forecast
+prophet_plot_components(
+  im,
+  fcst_im,
+  uncertainty = TRUE,
+  plot_cap = TRUE,
+  yearly_start = 0,
+  render_plot = TRUE
+)
+
+
+
+
+# out of sample (validation set) assessment
+RMSE_im = sqrt(mean((tail(train_day$y,60) - tail(fcst_im$yhat,60))^2))
+MAE_im = mean(abs( tail(train_day$y,60) - tail(fcst_im$yhat,60) ))
+MAPE_im = mean(abs(  (tail(train_day$y,60) - tail(fcst_im$yhat,60))  / tail(train_day$y,60) ))
+
+tibble("RMSE"= c(round(RMSE_im,4)), "MAE" = round(MAE_im,4), "MAPE" = round(MAPE_im,4))
+
+
+
+
+
+
+
+
+
+#making future dataframes
+future_fm <- make_future_dataframe(im, periods = 60, 
+                                   freq = "day", include_history = FALSE) #predictions for two months
+
+future_fm$WSPM = prophet_test$WSPM 
+future_fm$DEWP = prophet_test$DEWP
+future_fm$O3 = prophet_test$O3
+future_fm$PRES = prophet_test$PRES
+
+# prediction
+fcst_fm <- predict(fm,future_fm) # creating forecast for 60 days
+
+#regressor coefficients 
+regressor_coefficients(im)
+
+
+
+
+
+
+#####################################
+#####################################
+#####################################
+###########
+###########   Modeltime package
+###########
+#####################################
+#####################################
+#####################################
+
+
+# summarize mosquito count averages (cummulative across AM, IM, GGE)!!!
+data <- my.data %>%
   mutate(day = floor_date(ENDDATETIME, "day")) %>%
   group_by(day) %>%
-  summarize(avg = mean(FEMALES))
+  summarize(avg = mean(FEMALES),
+            temp = Thermometer,
+            humid = Hygrometer,
+            precip = Rain.Gauge)
 
 
 
+#write.csv(data, "Z:/Research Dept/Rob Straser/cignigavg")
 
-# group by ZONE
-data1 <- dat.cdc %>%
-  mutate(day = floor_date(ENDDATETIME, "day")) %>%
-  group_by(ZONE, day) %>%
-  summarize(avg = mean(FEMALES))
-  
-
-# TEST TEST TEST!!!! group by ZONE
-data2 <- full.data %>%
-  mutate(day = floor_date(ENDDATETIME, "day")) %>%
-  group_by(ZONE, day) %>%
-  summarize(avg = mean(FEMALES))
 
 
 # calculate the moving averages (3 moving average)
-#data <- data %>%
-#  arrange(day) %>% 
-#  mutate(avg3 = zoo::rollmean(avg, k = 3, fill = NA))  %>%
-#  select(day,
-#         avg,
-#         avg3)
+data3 <- data %>%
+  arrange(day) %>% 
+  mutate(avg3 = zoo::rollmean(avg, k = 3, fill = NA))  %>%
+  select(day,
+         avg,
+         avg3)
+
+
+
+
+
+
+
+
+
+##########
+## USE THE PDAT DATASET INSTEAD
+###########
+
+
+#data <- pdat %>% 
+#          rename(day = ds,
+#                 avg = y)
+
+
+
 
 
 
 # visualize time series data set
-#data %>%
-#  plot_time_series(day, avg, .interactive = FALSE)
+data %>%
+ plot_time_series(day, avg, .interactive = FALSE)
 
-data1 %>%
-  filter(T)
-  group_by(ZONE) %>%
-  plot_time_series(day, avg,
-                   .facet_ncol  = 2, 
-                   .interactive = FALSE)
+
+
+
+
 
 # can also plot as boxplots
-data1 %>%
-  group_by(ZONE) %>%
+data %>%
   plot_time_series_boxplot(day, avg,
                            .period = "1 month",
                    .facet_ncol  = 2, 
                    .interactive = FALSE)
 
 # can detect anomalies
-data1 %>%
-  filter(ZONE == "Zone GGE") %>%
+data %>%
   plot_anomaly_diagnostics(day, avg,)
 
 
 # can detect frequency and trends
-data1 %>%
-  filter(ZONE == "Zone GGE") %>%
+data %>%
   plot_stl_diagnostics(day, avg, 
                        .frequency = "auto", .trend = "auto",
                        .interactive = FALSE)
@@ -674,15 +1581,6 @@ data1 %>%
 
 
 
-# Some ML models dont handle the moving average well, so keep regualar averages
-# Need to remove annomalie zeros in the data to reduce static
-# Subsetting by ZONE will help with the variation in the counts
-
-# TO DO LIST:
-# - remove anomaly zeros (<3 observation on a DATE???)
-# - subset by ZONE
-# - calculate sample date FEMALES averages within each ZONE
-# - rerun MLs on each ZONE separately 
 
 
 
@@ -705,7 +1603,7 @@ data1 %>%
 # setting 'assess = 3 months" tells function to use last 3 months to data as a testing set
 # setting 'cumulative = TRUE' tells the sampling to use all prior data as training set
 splits <- data %>%
-  time_series_split(assess = "3 months", cumulative = TRUE)
+  time_series_split(assess = "9 months", cumulative = TRUE)
 
 # visualize the train/test split
 splits %>%
@@ -722,6 +1620,11 @@ splits %>%
 # Modeling data
 #
 #####################
+
+
+
+
+
 
 #### Automatic models ####
 
@@ -815,7 +1718,7 @@ model_table <- modeltime_table(
   model_fit_arima, 
   model_fit_prophet,
   workflow_fit_glmnet,
-  workflow_fit_rf,
+  #workflow_fit_rf,
   workflow_fit_prophet_boost
 ) 
 
@@ -829,10 +1732,10 @@ model_table
 # fitted values, and residuals for the testing set.
 
 
+
 calibration_table <- model_table %>%
   modeltime_calibrate(testing(splits))
 calibration_table
-
 
 
 # visualize forecast models
