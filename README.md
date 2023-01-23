@@ -16,7 +16,7 @@ XXX
 
 
 ## Figures (update figures)
-![total.figs](https://github.com/rstraser/Gryon_biocontrol_eval/blob/main/figures/total.figs.jpg)
+![total.figs](https://github.com/rstraser/Culex_population_ML/blob/main/figures/all_figures.jpg)
 
 
 ## Analytics (update)
