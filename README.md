@@ -8,19 +8,19 @@
 
 
 
-## Figures (update figures)
+## Figures (preliminary)
 ![total.figs](https://github.com/rstraser/Culex_population_ML/blob/main/figures/all_figures.jpg)
 
 
-## Analytics (update)
+## Analytics
 * data processing/cleaning
 * machine learning (autoML and ML)
 * data visualizations
 
-## Technologies (update)
+## Technologies
 * R (v3.6.1)
 
-## Packages (update packages)
+## Packages
 * ggplot2
 * tidyverse
 * tidymodels
