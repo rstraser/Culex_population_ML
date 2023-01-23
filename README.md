@@ -8,11 +8,6 @@ Culex nigripalus is one of the most prominent mosquito species in Southwest Flor
 * Understanding the seasonal and long-term population trends of Culex nigripalpus is vital to reduce the risk of human infection. 
 * Here, I explore the utility in predictive modeling to forecast Culex nigripalpus populations in Collier County, Florida.
 
-This work is published in peer review journal,[JOURNAL](https://www.google.com) and can be found [here](https://www.google.com).
-
-**Citation:**
-
-XXX
 
 
 ## Figures (update figures)
@@ -29,14 +24,15 @@ XXX
 
 ## Packages (update packages)
 * ggplot2
-* viridis
-* pipeR
-* ggpubr
-* survival
-* survminer
-* lme4
-* multcomp
-* Rmisc
+* tidyverse
+* tidymodels
+* modeltime
+* timetk
+* lubridate
+* parsnip
+* randomForest
+* zoo
+* reshape2
 
 
 ## About the project
@@ -45,13 +41,10 @@ XXX
 
 Culex nigripalpus is one of the most important vectors of West Nile virus in southwest Florida. Due to the medical significance of the species, understanding the seasonal, long-term, and projected trends of Cx. nigripalpus is critical to reduce the risk of human infections. The use of statistical models have become increasingly important for forecasting infectious disease risk to guide public health. The Collier Mosquito Control District, located in Collier County, Florida, has curated an extensive database of spatial and temporal mosquito abundance, as well as operational control activities within the District since 2010. Using a combination of mosquito surveillance records and local climate data, we evaluated several modeling methods to optimize predictive forecasting of population trends of Cx. nigripalpus. This project highlights the prospects and limitations of using predictive forecasting to evaluate mosquito abundance trends, which may help the Collier Mosquito Control District perform more targeted treatments against Cx. nigripalpus.
 
-### The solution 
-
-XXX
 
 ### The question
 
-XXX
+Can predictive forecasting effectively model the seasonal and long-term population trends of Culex nigripalpus to improve vector control operations and safe-gaurd publuc health?
 
 
 
