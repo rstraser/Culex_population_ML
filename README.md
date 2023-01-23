@@ -33,6 +33,7 @@ Culex nigripalpus is one of the most important vectors of West Nile virus in sou
 * randomForest
 * zoo
 * reshape2
+* prophet
 
 
 ## About the project
